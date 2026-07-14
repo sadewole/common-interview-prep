@@ -992,6 +992,69 @@ setImmediate()
 
 ---
 
+# JavaScript Event Loop: Microtasks vs. Macrotasks
+The **JavaScript event loop** prioritizes microtasks over macrotasks. The engine must **completely empty the microtask queue** before it can move on to execute a single macrotask.
+
+
+[ Call Stack ] ──(If empty)──> [ Microtask Queue ] ──(Drains fully)──> [ Render UI ] ──> [ Macrotask Queue ] ──(Runs ONE task)──> Loops back
+
+
+---
+
+### The Execution Lifecycle
+
+1. **Synchronous Code**: The event loop executes all synchronous code directly in the call stack. Asynchronous operations are sent to environment APIs (like browser Web APIs), which push callbacks into their respective queues.
+2. **Microtasks Check**: When the call stack empties, the event loop processes **all** waiting microtasks. If a microtask schedules another microtask, that new one also runs immediately. This continues until the queue is completely empty.
+3. **UI Rendering**: In browsers, the page UI updates and repaints right after the microtask queue clears.
+4. **Macrotasks Check**: The event loop picks up **exactly one** task from the macrotask queue and pushes it to the call stack. Once that single macrotask finishes, the loop starts over from Step 2.
+
+---
+
+### Comparison Table
+
+| Feature | Microtasks | Macrotasks (Tasks) |
+| :--- | :--- | :--- |
+| **Priority** | Higher priority | Lower priority |
+| **Execution Rule** | Drains completely per iteration | Executes exactly one per iteration |
+| **Common Examples** | <ul><li>`Promise.then() / .catch() / .finally()`</li><li>`await` continuations</li><li>`queueMicrotask()`</li><li>`MutationObserver`</li></ul> | <ul><li>`setTimeout() / setInterval()`</li><li>`setImmediate()` (Node.js)</li><li>User interaction events (clicks)</li><li>Network response / I/O callbacks</li></ul> |
+
+
+Can you guess the exact order of logs for this block?
+
+```javascript
+console.log("1: Start");
+
+setTimeout(() => {
+  console.log("2: Macrotask 1");
+  Promise.resolve().then(() => console.log("3: Microtask inside Macrotask"));
+}, 0);
+
+Promise.resolve().then(() => {
+  console.log("4: Microtask 1");
+}).then(() => {
+  console.log("5: Microtask 2");
+});
+
+setTimeout(() => {
+  console.log("6: Macrotask 2");
+}, 0);
+
+console.log("7: End");
+```
+
+Final Output:
+```text
+1: Start
+7: End
+4: Microtask 1
+5: Microtask 2
+2: Macrotask 1
+3: Microtask inside Macrotask
+6: Macrotask 2
+```
+
+___
+
 # 5. When should you use Worker Threads instead of Child Processes?
 
 ## Worker Threads
